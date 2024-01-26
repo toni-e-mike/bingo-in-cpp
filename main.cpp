@@ -1,9 +1,14 @@
-#include "gencards.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
 #include <unistd.h>
 #include <cstdlib>
+#include <ctime>
+#include <fstream>
+#include <cmath>
+#include <filesystem>
+#include <algorithm>
+namespace fs = std::filesystem;
 using namespace std;
 
 string blue = "\u001b[34m";
@@ -14,16 +19,66 @@ string bold = "\u001b[1m";
 #define NUMEROS 100
 #define COLUNAS 10
 #define DELAY 1000000
-#define MODO_AUTO false
+
+const int rows = 5;
+const int cols = 5;
+const int gridSize = rows * cols;
+const string baseFileName = "cards";
+int cardnumber;
+
+void shuffleArray(int* arr, int size) {
+    random_shuffle(arr, arr + size);
+}
+
+int gen() {
+    srand(static_cast<unsigned>(time(0)));
+
+    if (!fs::exists("Cards")) {
+        fs::create_directory("Cards");
+    }
+
+    cout << "How many cards do you want to create?";
+    cin >> cardnumber;
+    system("clear");
+    int numbers[gridSize];
+    for (int i = 0; i < gridSize; ++i) {
+        numbers[i] = i + 1;
+    }
+
+    for (int i = 1; i <= cardnumber; ++i) {
+        shuffleArray(numbers, gridSize);
+
+        stringstream fileNameStream;
+        fileNameStream << "Cards" << "/" << baseFileName << "_" << i << ".txt";
+        string fileName = fileNameStream.str();
+
+        ofstream outputFile(fileName);
+
+        if (outputFile.is_open()) {
+            for (int j = 0; j < gridSize; ++j) {
+                outputFile << numbers[j] << " ";
+                if ((j + 1) % cols == 0) { 
+                    outputFile << endl; 
+                }
+            }
+
+            outputFile.close();
+        }
+    }
+
+    cout << "Your" << cardnumber << " cards have been generated in the Cards folder.\n";
+
+}
+
 
 void clearScreen()
 {
     cout << "\033[2J\033[1;1H" << flush;
 }
 
-int geraNumero()
+int geraNumero(int maxNumber)
 {
-    return rand() % NUMEROS + 1;
+    return rand() % maxNumber + 1;
 }
 
 void mainmenu()
@@ -50,27 +105,11 @@ void displayPanel(int pickedAmount, int currentNumber, int sortedNumbers[], int 
     cout << "Picked Amount: " << pickedAmount << "\n";
     cout << "Panel:\n";
 
-    int totalNumbersToDisplay = min(pickedAmount, NUMEROS);
-
-    for (int i = 1; i <= totalNumbersToDisplay; i++)
+    for (int i = 1; i <= pickedAmount; i++)
     {
-        bool isCurrent = (i == currentNumber);
-        bool isSorted = false;
+        bool isSorted = find(sortedNumbers, sortedNumbers + sortedCount, i) != sortedNumbers + sortedCount;
 
-        for (int j = 0; j < sortedCount; j++)
-        {
-            if (sortedNumbers[j] == i)
-            {
-                isSorted = true;
-                break;
-            }
-        }
-
-        if (isCurrent)
-        {
-            cout << blue << setw(5) << i;
-        }
-        else if (isSorted)
+        if (isSorted)
         {
             cout << red << setw(5) << i;
         }
@@ -81,7 +120,7 @@ void displayPanel(int pickedAmount, int currentNumber, int sortedNumbers[], int 
 
         if (i % COLUNAS == 0)
         {
-            cout << reset << endl;
+            cout << endl;
         }
         else
         {
@@ -89,20 +128,22 @@ void displayPanel(int pickedAmount, int currentNumber, int sortedNumbers[], int 
         }
     }
 
-    if (totalNumbersToDisplay % COLUNAS != 0)
+    if (pickedAmount % COLUNAS != 0)
     {
-        cout << reset << endl;
+        cout << endl;
     }
 }
 
 int main()
 {
+    srand(time(NULL)); // Seed for random number generation
+
     int bingotype;
     int quantity;
     int previousNumber = 0;
     int currentNumber = 0;
-    const int MAX_PREVIOUS = 5;
-    int previousNumbers[MAX_PREVIOUS];
+    int sortedNumbers[NUMEROS] = {0};
+    int sortedCount = 0;
 
     do
     {
@@ -110,53 +151,48 @@ int main()
         mainmenu();
         cin >> bingotype;
 
-        if (bingotype == 1)
+        if (bingotype == 1 || bingotype == 2)
         {
             clearScreen();
-            cout << "You selected 'Automatic Draw'" << endl;
+            cout << (bingotype == 1 ? "You selected 'Automatic Draw'" : "You selected 'Manual Draw'") << endl;
             cout << "Enter the quantity of numbers for the draw (75, 90, 100): ";
             cin >> quantity;
+            cin.ignore(); // Clear buffer after reading number
 
             if ((quantity == 75) || (quantity == 90) || (quantity == 100))
             {
-                cout << "You entered one of the allowed numbers." << endl;
+                sortedCount = 0;
+                fill_n(sortedNumbers, NUMEROS, 0);
 
-                int sortedNumbers[NUMEROS];
-                int sortedCount = 0;
-
-                for (int i = 0; i < MAX_PREVIOUS; i++)
+                while (sortedCount < quantity)
                 {
-                    previousNumbers[i] = 0;
-                }
+                    if (bingotype == 2)
+                    {
+                        cout << "Press Enter to draw a number...";
+                        cin.get(); // Wait for Enter key press for manual draw
+                    }
 
-                for (int i = 0; i < quantity && sortedCount < quantity; i++)
-                {
                     clearScreen();
-
-                    // Display previous number in red
                     displayNumber(previousNumber, red, "Previous Number");
 
-                    // Draw a new number
-                    currentNumber = geraNumero();
+                    do {
+                        currentNumber = geraNumero(quantity);
+                    } while (find(sortedNumbers, sortedNumbers + sortedCount, currentNumber) != sortedNumbers + sortedCount);
 
-                    // Display current number in blue
                     displayNumber(currentNumber, blue, "Current Number");
-
-                    // Display panel with columns
                     displayPanel(quantity, currentNumber, sortedNumbers, sortedCount);
 
-                    // Update previousNumber with the drawn number
                     previousNumber = currentNumber;
-
-                    // Update sortedNumbers with the currentNumber
                     sortedNumbers[sortedCount++] = currentNumber;
 
-                    usleep(DELAY); // Add delay before drawing the next number
+                    if (bingotype == 1)
+                    {
+                        usleep(DELAY); // Delay for automatic draw
+                    }
                 }
 
-                // Clear the screen after displaying all the numbers
-                cout << "Press Enter to continue...";
-                cin.ignore(); // Wait for Enter key press
+                cout << (bingotype == 1 ? "Automatic" : "Manual") << " draw complete. Press Enter to continue...";
+                cin.get();
                 clearScreen();
             }
             else
@@ -164,12 +200,9 @@ int main()
                 cout << "Invalid input. The number must be 75, 90, or 100." << endl;
             }
         }
-        else if (bingotype == 2)
-        {
-            cout << "You selected 'Manual Draw'" << endl;
-        }
         else if (bingotype == 3)
         {
+            cout << "You selected 'Generate Cards'" << endl;
             gen();
         }
         else if (bingotype == 4)
@@ -181,7 +214,6 @@ int main()
         {
             cout << "Invalid Answer, try again or press '4' to quit" << endl;
         }
-
     } while (true);
 
     return 0;
