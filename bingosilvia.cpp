@@ -1,3 +1,4 @@
+#include "gencards.h"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -169,7 +170,7 @@ int main()
         }
         else if (bingotype == 3)
         {
-            cout << "You selected 'Generate Cards'" << endl;
+            gen();
         }
         else if (bingotype == 4)
         {
