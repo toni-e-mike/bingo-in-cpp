@@ -41,7 +41,7 @@ void createNumbers(int number[]) {
 
 int main(){
     char answer;
-    srand(time(0)); // This is going to initialize a random seed
+    srand(time(0));         // This is going to initialize a random seed
 
     cout << "Welcome to the bingo game" << endl;
     cout << "The sortition is comprised between 1 and " << Numbers << endl;
