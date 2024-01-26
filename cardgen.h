@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 const int rows = 5;
 const int cols = 5;
 const int gridSize = rows * cols;
-const string baseFileName = "cartao";
+const string baseFileName = "cards";
 int cardnumber;
 
 void shuffleArray(int* arr, int size) {
@@ -20,11 +20,11 @@ void shuffleArray(int* arr, int size) {
 int gen() {
     srand(static_cast<unsigned>(time(0)));
 
-    if (!fs::exists("Cartoes")) {
-        fs::create_directory("Cartoes");
+    if (!fs::exists("Cards")) {
+        fs::create_directory("Cards");
     }
 
-    cout << "Quantos cartões queres criar?";
+    cout << "How many cards do you want to create?";
     cin >> cardnumber;
     system("clear");
     int numbers[gridSize];
@@ -36,7 +36,7 @@ int gen() {
         shuffleArray(numbers, gridSize);
 
         stringstream fileNameStream;
-        fileNameStream << "Cartoes" << "/" << baseFileName << "_" << i << ".txt";
+        fileNameStream << "Cards" << "/" << baseFileName << "_" << i << ".txt";
         string fileName = fileNameStream.str();
 
         ofstream outputFile(fileName);
@@ -53,6 +53,6 @@ int gen() {
         }
     }
 
-    cout << "Os teus " << cardnumber << " cartões foram gerados na pasta Cartoes.\n";
+    cout << "Your" << cardnumber << " cards have been generated in the Cards folder.\n";
 
 }
